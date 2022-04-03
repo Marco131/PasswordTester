@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security;
+using System.Diagnostics;
+using System.IO;
 
 namespace PasswordFinder
 {
@@ -9,9 +10,10 @@ namespace PasswordFinder
     {
         static void Main(string[] args)
         {
+            // import all characters available for passwords from file
+            List<char> pwCharacters = File.ReadAllText("../../../characters.txt").ToList<char>();
 
-            //string password = Console.ReadLine();
-            SecureString securePwd = new SecureString();
+            string password = "";
             ConsoleKeyInfo key;
             bool pwFound = false;
 
@@ -19,26 +21,46 @@ namespace PasswordFinder
             Console.Write("Insert your password : ");
             do
             {
+                string pwInputDisplay = "Insert your password : ";
                 key = Console.ReadKey(true);
 
-                // ignore any key out of range.
-                if (((int)key.Key) >= 65 && ((int)key.Key <= 90))
+                // ignore any unavailable keys
+                if (pwCharacters.Contains(key.KeyChar))
                 {
                     // append the character to the password.
-                    securePwd.AppendChar(key.KeyChar);
-                    Console.Write("*");
+                    password += key.KeyChar;
+                }
+                else if (key.Key == ConsoleKey.Backspace && password.Length > 0)
+                {
+                    password = password.Remove(password.Length - 1);
+                    Console.Clear();
                 }
 
+                foreach (char character in password)
+                {
+                    pwInputDisplay += "*";
+                }
+
+                Console.SetCursorPosition(0,0);
+                Console.Write(pwInputDisplay);
                 // exit if Enter key is pressed.
             } while (key.Key != ConsoleKey.Enter);
 
-            Console.WriteLine();
-            Console.WriteLine();
+
+            Console.WriteLine("\n");
+
+
+            // find the word
+            Stopwatch cronometer = new Stopwatch();
+            cronometer.Start();
+            Console.Beep();
 
             int currentLength = 1;
             List<char> word = new List<char>();
             while (!pwFound) // loop while the password hasn't been found
             {
+                Console.WriteLine("{0} characters", currentLength);
+
                 word.Clear();
                 while(word.Count < currentLength) // fill word with default value
                 {
@@ -48,11 +70,18 @@ namespace PasswordFinder
                 int letterNb = 0;
                 while(letterNb < currentLength) // loop for the number of letters in the word
                 {
-                    Console.WriteLine(new string(word.ToArray()));
-
-                    if (word[letterNb] == 'z')
+                    string currentWord = new string(word.ToArray());
+                    //Console.WriteLine(currentWord);
+                    // check if the password is found
+                    if (currentWord == password)
                     {
-                        word[letterNb] = 'a';
+                        pwFound = true;
+                        break;
+                    }
+
+                    if (word[letterNb] == pwCharacters.Last())
+                    {
+                        word[letterNb] = pwCharacters[0];
                         letterNb += 1;
                     }
                     else
@@ -60,12 +89,17 @@ namespace PasswordFinder
 
                     if (letterNb < word.Count)
                     {
-                        word[letterNb] += (char)1;
+                        word[letterNb] = pwCharacters[pwCharacters.FindIndex(x => x == word[letterNb]) + 1];
                     }
                 }
 
                 currentLength += 1;
             }
+
+            cronometer.Stop();
+            Console.Beep();
+            Console.WriteLine("\nThe password is \"{0}\", and it was found in {1} seconds", new string(word.ToArray()), cronometer.ElapsedMilliseconds/1000f);
+            Console.ReadKey();
         }
     }
 }
